@@ -1,9 +1,5 @@
 streamlit
-numpy
 pandas
-requests
-beautifulsoup4
-websockets
-Pillow
-pytesseract
+plotly
+
 
