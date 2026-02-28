@@ -1,72 +1,58 @@
 import streamlit as st
-from the_brain import analyze_data
-from scanner import scan_site
-from PIL import Image
+import base64
+import json
+import pandas as pd
+import os
+from datetime import datetime
 
-# پیج کی بنیادی سیٹنگز
-st.set_page_config(page_title="Aviator Pro Predictor", layout="centered")
+# --- ⚙️ سیٹنگز ---
+st.set_page_config(page_title="Abbas 47-in-1 Master Bot", layout="wide")
+K = "x7k9p2m4q8r1t5v3n6z0y"
+DB_FILE = "master_database.csv"
 
-st.title("🚀 Aviator Universal Predictor")
-st.write("اپنا پسندیدہ طریقہ منتخب کریں اور ڈیٹا فراہم کریں:")
+# --- 🔐 ڈی کوڈنگ ---
+def decrypt(en):
+    try:
+        b = base64.b64decode(en)
+        d = bytes(x ^ ord(K[i % len(K)]) for i, x in enumerate(b))
+        return json.loads(d.decode())
+    except: return None
 
-# مینیو یا ریڈیو بٹن بنانا
-option = st.radio(
-    "تجزیہ کرنے کا طریقہ منتخب کریں:",
-    ("Link Scanner", "Screenshot Upload", "Manual Entry")
-)
+# --- 📁 آٹو سیونگ (ان لمیٹڈ) ---
+def save(data):
+    row = {"TS": datetime.now(), "G": data['g']['h'], "V": float(data['i']['v'])}
+    df = pd.DataFrame([row])
+    if not os.path.isfile(DB_FILE): df.to_csv(DB_FILE, index=False)
+    else: df.to_csv(DB_FILE, mode='a', header=False, index=False)
 
-st.markdown("---")
+# --- 🛰️ ڈیٹا وصول کرنا ---
+if 'd' in st.query_params:
+    sd = decrypt(st.query_params['d'])
+    if sd: save(sd)
 
-# --- آپشن 1: لنک اسکینر (Link Scanner) ---
-if option == "Link Scanner":
-    st.header("🔍 Auto Web Scanner")
-    url = st.text_input("گیم کا لنک (URL) یہاں پیسٹ کریں:")
-    if st.button("Start Scan"):
-        if url:
-            with st.spinner('ویب سائٹ اسکین کی جا رہی ہے...'):
-                # یہ اسکینر فائل سے نتیجہ لائے گا
-                res = scan_site(url)
-                st.info(f"Scanner Result: {res}")
-        else:
-            st.warning("براہ کرم پہلے لنک درج کریں۔")
+# --- 📊 ڈیش بورڈ ---
+st.title("🎮 47-in-1 Universal Signal Bot")
 
-# --- آپشن 2: اسکرین شاٹ اپ لوڈر (Screenshot Upload) ---
-elif option == "Screenshot Upload":
-    st.header("📸 Screenshot Analysis")
-    uploaded_file = st.file_uploader("گیم ہسٹری کا تازہ ترین اسکرین شاٹ اپ لوڈ کریں", type=['png', 'jpg', 'jpeg'])
+if os.path.isfile(DB_FILE):
+    full_df = pd.read_csv(DB_FILE)
+    st.sidebar.metric("Total Rounds", len(full_df))
     
-    if uploaded_file is not None:
-        image = Image.open(uploaded_file)
-        st.image(image, caption="آپ کا اپ لوڈ کردہ اسکرین شاٹ", use_column_width=True)
+    # گیم سلیکٹر (خود بخود تمام 47 گیمز یہاں آ جائیں گی)
+    game = st.sidebar.selectbox("Select Your Game", full_df['G'].unique())
+    g_data = full_df[full_df['G'] == game].tail(100)
+
+    # 🎯 سگنل بٹن (یہ اب ہمیشہ یہاں رہے گا)
+    if st.button("🚀 GET SIGNAL (Analysis)"):
+        if len(g_data) < 10:
+            st.warning("کم از کم 10 راؤنڈز کا ڈیٹا جمع ہونے دیں...")
+        else:
+            avg = g_data['V'].tail(5).mean()
+            if avg < 1.8: res, col = "SAFE BET (1.50x) ✅", "green"
+            elif avg > 4.0: res, col = "DANGER: SKIP 🔴", "red"
+            else: res, col = "WAIT FOR PINK 🟡", "orange"
+            st.markdown(f"<h2 style='color:{col}'>{res}</h2>", unsafe_allow_key=True)
+
+    st.line_chart(g_data['V'])
+else:
+    st.info("سسٹم ریڈی ہے! کروم میں اسکرپٹ چلائیں، ڈیٹا خود بخود یہاں بھرنا شروع ہو جائے گا۔")
         
-        if st.button("Extract & Predict"):
-            with st.spinner('تصویر سے نمبر نکالے جا رہے ہیں...'):
-                # فی الحال یہ میسج دکھائے گا جب تک OCR مکمل سیٹ نہ ہو
-                st.info("تصویر سے ڈیٹا نکالنے کا فیچر ایکٹیویٹ ہو رہا ہے...")
-                st.warning("نوٹ: اگر خودکار طریقے سے نمبر نہ نکلیں تو 'Manual Entry' استعمال کریں۔")
-
-# --- آپشن 3: مینول ڈیٹا انٹری (Manual Entry) ---
-elif option == "Manual Entry":
-    st.header("📊 Manual Data Entry")
-    numbers_input = st.text_input("پچھلے 5 راؤنڈز کے نمبر لکھیں (مثال: 1.20, 3.50, 1.05):")
-    
-    if st.button("Analyze Now"):
-        if numbers_input:
-            try:
-                # ٹیکسٹ کو نمبرز کی لسٹ میں بدلنا
-                data_list = [float(x.strip()) for x in numbers_input.split(",")]
-                
-                with st.spinner('AI تجزیہ کر رہا ہے...'):
-                    # یہ 'the_brain.py' سے حساب منگوائے گا
-                    prediction = analyze_data(data_list)
-                    
-                    # نتیجہ دکھانا
-                    st.success(f"### 🎯 Prediction: {prediction['status']}")
-                    st.metric("Winning Chance", f"{prediction['percentage']}%")
-            except ValueError:
-                st.error("براہ کرم نمبر صحیح طرح لکھیں اور درمیان میں کوما (,) لگائیں۔")
-        else:
-            st.warning("تجزیہ کے لیے کچھ نمبرز لکھنا ضروری ہے۔")
-
-st.markdown("---")
-st.caption("Developed by Abbas | Powered by AI Predictor Engine")
