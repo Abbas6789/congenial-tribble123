@@ -1,35 +1,72 @@
 import streamlit as st
-from the_brain import ProbabilisticBrain
-from scanner import find_history_endpoints
+from the_brain import analyze_data
+from scanner import scan_site
+from PIL import Image
 
-st.set_page_config(page_title="Aviator AI Tool", layout="wide")
-st.title("🚀 Aviator AI Predictor")
+# پیج کی بنیادی سیٹنگز
+st.set_page_config(page_title="Aviator Pro Predictor", layout="centered")
 
-brain = ProbabilisticBrain()
+st.title("🚀 Aviator Universal Predictor")
+st.write("اپنا پسندیدہ طریقہ منتخب کریں اور ڈیٹا فراہم کریں:")
 
-# سائیڈ بار کنٹرول
-st.sidebar.header("سیٹ اپ")
-game_link = st.sidebar.text_input("گیم کا یو آر ایل ڈالیں")
-if st.sidebar.button("آٹو اسکین کریں"):
-    result = find_history_endpoints(game_link)
-    st.sidebar.write(result)
+# مینیو یا ریڈیو بٹن بنانا
+option = st.radio(
+    "تجزیہ کرنے کا طریقہ منتخب کریں:",
+    ("Link Scanner", "Screenshot Upload", "Manual Entry")
+)
 
-# مین اسکرین
-col1, col2 = st.columns(2)
+st.markdown("---")
 
-with col1:
-    st.subheader("ڈیٹا انٹری")
-    manual_input = st.text_area("ہسٹری یہاں ڈالیں (مثال: 1.2, 2.5, 1.1)", height=150)
-    if st.button("تجزیہ شروع کریں"):
-        data = [float(x.strip()) for x in manual_input.split(",") if x.strip()]
-        brain.update_history(data)
-        st.success("ڈیٹا اپ لوڈ ہو گیا!")
+# --- آپشن 1: لنک اسکینر (Link Scanner) ---
+if option == "Link Scanner":
+    st.header("🔍 Auto Web Scanner")
+    url = st.text_input("گیم کا لنک (URL) یہاں پیسٹ کریں:")
+    if st.button("Start Scan"):
+        if url:
+            with st.spinner('ویب سائٹ اسکین کی جا رہی ہے...'):
+                # یہ اسکینر فائل سے نتیجہ لائے گا
+                res = scan_site(url)
+                st.info(f"Scanner Result: {res}")
+        else:
+            st.warning("براہ کرم پہلے لنک درج کریں۔")
 
-with col2:
-    st.subheader("لائیو سگنل")
-    prob, status = brain.calculate_logic()
-    st.metric("جیتنے کا چانس", f"{prob*100}%")
-    st.info(f"مشورہ: {status}")
+# --- آپشن 2: اسکرین شاٹ اپ لوڈر (Screenshot Upload) ---
+elif option == "Screenshot Upload":
+    st.header("📸 Screenshot Analysis")
+    uploaded_file = st.file_uploader("گیم ہسٹری کا تازہ ترین اسکرین شاٹ اپ لوڈ کریں", type=['png', 'jpg', 'jpeg'])
+    
+    if uploaded_file is not None:
+        image = Image.open(uploaded_file)
+        st.image(image, caption="آپ کا اپ لوڈ کردہ اسکرین شاٹ", use_column_width=True)
+        
+        if st.button("Extract & Predict"):
+            with st.spinner('تصویر سے نمبر نکالے جا رہے ہیں...'):
+                # فی الحال یہ میسج دکھائے گا جب تک OCR مکمل سیٹ نہ ہو
+                st.info("تصویر سے ڈیٹا نکالنے کا فیچر ایکٹیویٹ ہو رہا ہے...")
+                st.warning("نوٹ: اگر خودکار طریقے سے نمبر نہ نکلیں تو 'Manual Entry' استعمال کریں۔")
 
-if brain.history:
-    st.line_chart(brain.history)
+# --- آپشن 3: مینول ڈیٹا انٹری (Manual Entry) ---
+elif option == "Manual Entry":
+    st.header("📊 Manual Data Entry")
+    numbers_input = st.text_input("پچھلے 5 راؤنڈز کے نمبر لکھیں (مثال: 1.20, 3.50, 1.05):")
+    
+    if st.button("Analyze Now"):
+        if numbers_input:
+            try:
+                # ٹیکسٹ کو نمبرز کی لسٹ میں بدلنا
+                data_list = [float(x.strip()) for x in numbers_input.split(",")]
+                
+                with st.spinner('AI تجزیہ کر رہا ہے...'):
+                    # یہ 'the_brain.py' سے حساب منگوائے گا
+                    prediction = analyze_data(data_list)
+                    
+                    # نتیجہ دکھانا
+                    st.success(f"### 🎯 Prediction: {prediction['status']}")
+                    st.metric("Winning Chance", f"{prediction['percentage']}%")
+            except ValueError:
+                st.error("براہ کرم نمبر صحیح طرح لکھیں اور درمیان میں کوما (,) لگائیں۔")
+        else:
+            st.warning("تجزیہ کے لیے کچھ نمبرز لکھنا ضروری ہے۔")
+
+st.markdown("---")
+st.caption("Developed by Abbas | Powered by AI Predictor Engine")
