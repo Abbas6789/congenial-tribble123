@@ -1,4 +1,4 @@
-imimport streamlit as st
+import streamlit as st
 import pandas as pd
 import os
 import base64
@@ -12,26 +12,22 @@ st.set_page_config(page_title="Abbas Master Bot", layout="wide")
 DB_FILE = "master_database.csv"
 K = "x7k9p2m4q8r1t5v3n6z0y"
 
-# --- ڈیٹا ڈی کوڈ کرنے کا فکسڈ فنکشن ---
+# --- ڈیٹا ڈی کوڈ کرنے کا فنکشن ---
 def decrypt(en_str):
     try:
-        # 1. یو آر ایل سے نشانات صاف کرنا (فکس)
+        # نشانات کو صاف کرنا
         en_str = urllib.parse.unquote(en_str).replace('-', '+').replace('_', '/')
-        
-        # 2. بیس 64 پیڈنگ مکمل کرنا
+        # پیڈنگ مکمل کرنا
         missing_padding = len(en_str) % 4
         if missing_padding:
             en_str += '=' * (4 - missing_padding)
-            
         b = base64.b64decode(en_str)
-        
-        # 3. XOR ڈی کوڈنگ
+        # XOR ڈی کوڈنگ
         decrypted_bytes = bytearray()
         for i in range(len(b)):
             decrypted_bytes.append(b[i] ^ ord(K[i % len(K)]))
-        
         return json.loads(decrypted_bytes.decode('utf-8'))
-    except Exception as e:
+    except:
         return None
 
 # --- ڈیٹا وصول کرنا ---
@@ -40,9 +36,8 @@ if 'd' in params:
     sd = decrypt(params['d'])
     if sd:
         current_time = datetime.now().strftime("%H:%M:%S")
-        game_name = sd.get('g', {}).get('h', 'Unknown Site')
+        game_name = sd.get('g', {}).get('h', 'Game_Live')
         val = sd.get('i', {}).get('v', '0')
-        
         try:
             multiplier = float(val)
             df_new = pd.DataFrame([{"Time": current_time, "Game": game_name, "Multiplier": multiplier}])
@@ -51,9 +46,10 @@ if 'd' in params:
             else:
                 df_new.to_csv(DB_FILE, mode='a', header=False, index=False)
             st.rerun()
-        except: pass
+        except:
+            pass
 
-# --- ڈیش بورڈ ڈیزائن (وہی رہے گا) ---
+# --- ڈیش بورڈ ڈیزائن ---
 st.title("💎 ABBAS MASTER PREDICTOR")
 
 if os.path.isfile(DB_FILE):
@@ -80,13 +76,13 @@ if os.path.isfile(DB_FILE):
                 st.success(f"اگلا متوقع نمبر: {round(avg * 1.15, 2)}x")
         with col2:
             if st.button('🗑️ CLEAR HISTORY'):
-                if os.path.exists(DB_FILE): os.remove(DB_FILE)
+                if os.path.exists(DB_FILE):
+                    os.remove(DB_FILE)
                 st.rerun()
 
-        fig = go.Figure(go.Scatter(x=g_data['Time'], y=g_data['Multiplier'], mode='lines+markers', line=dict(color='#00ffcc')))
+        fig = go.Figure(go.Scatter(x=g_data['Time'], y=g_data['Multiplier'], mode='lines+markers', line=dict(color='#00ffcc', width=3)))
         fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'))
         st.plotly_chart(fig, use_container_width=True)
 else:
-    st.info("🛰️ اسکینر کا انتظار ہے...")
-
+    st.info("🛰️ اسکینر کا انتظار ہے... گیم شروع کریں اور اسکینر ایکٹیویٹ کریں۔")
         
